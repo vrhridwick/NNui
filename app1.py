@@ -3,6 +3,7 @@ import graphviz
 import pandas as pd
 import numpy as np
 import time
+from computation_inspector import render_computation_inspector
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="LucidNN", layout="wide", page_icon="🧠")
@@ -352,3 +353,20 @@ else:
                 })
     
     st.dataframe(pd.DataFrame(summary_data), use_container_width=True, hide_index=True)
+    st.markdown("---")
+st.markdown("---")
+st.subheader("🔍 Detailed Computation View")
+
+if st.session_state.trained:
+    # Dummy input for visualization (Phase 1)
+    input_vector = [1.0] * topology[0]
+
+    render_computation_inspector(
+        topology=topology,
+        network_data=st.session_state.network_data,
+        input_vector=input_vector,
+        activation_fn=activ_func,
+        epoch_idx=curr_epoch
+    )
+else:
+    st.info("Train the model to inspect computations.")
