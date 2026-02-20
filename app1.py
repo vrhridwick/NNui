@@ -3,7 +3,13 @@ import graphviz
 import pandas as pd
 import numpy as np
 import time
-from computation_inspector import render_computation_inspector
+# Assuming computation_inspector exists in your local directory
+try:
+    from computation_inspector import render_computation_inspector
+except ImportError:
+    # Fallback if file is missing (for safety)
+    def render_computation_inspector(**kwargs):
+        st.warning("computation_inspector.py not found. Computation view disabled.")
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="LucidNN", layout="wide", page_icon="🧠")
@@ -13,20 +19,26 @@ st.title("LucidNN 🧠")
 st.caption("Interactive Neural Network Visualization Tool")
 st.markdown("---")
 
-# --- SESSION STATE MANAGEMENT ---
+# --- SESSION STATE INITIALIZATION ---
+# 1. New Sidebar State
+if 'layers' not in st.session_state:
+    st.session_state.layers = [{"id": 0, "neurons": 3}]
+if 'layer_counter' not in st.session_state:
+    st.session_state.layer_counter = 0
+
+# 2. Existing Visualizer State
 if 'hidden_layers' not in st.session_state:
     st.session_state.hidden_layers = [3] 
-
 if 'network_data' not in st.session_state:
     st.session_state.network_data = {} 
 if 'trained' not in st.session_state:
     st.session_state.trained = False
 if 'training_history' not in st.session_state:
-    st.session_state.training_history = {} # Weights history
+    st.session_state.training_history = {} 
 if 'output_history' not in st.session_state:
-    st.session_state.output_history = []   # Outputs history (Actual vs Expected)
+    st.session_state.output_history = [] 
 if 'targets' not in st.session_state:
-    st.session_state.targets = []          # The "Expected" values
+    st.session_state.targets = [] 
 
 # --- HELPER FUNCTIONS ---
 def get_topology(inputs, hidden, outputs):
@@ -89,49 +101,77 @@ def open_neuron_editor(layer_idx, neuron_idx, prev_layer_size):
         st.session_state.network_data[key]['weights'] = new_weights
         st.rerun()
 
-# --- SIDEBAR: CONFIGURATION ---
+# --- SIDEBAR CONFIGURATION (UPDATED) ---
 with st.sidebar:
-    st.header("Network Config")
+    st.header("Model Configuration")
     
-    # 1. ARCHITECTURE
-    st.subheader("Architecture")
-    
-    col_label, col_add = st.columns([3, 1])
-    col_label.write("**Hidden Layers**")
-    if col_add.button("➕"): 
-        st.session_state.hidden_layers.append(3) 
-    
-    layers_to_remove = []
-    for i, n in enumerate(st.session_state.hidden_layers):
-        c1, c2 = st.columns([4, 1])
-        st.session_state.hidden_layers[i] = c1.number_input(f"Layer {i+1} Neurons", 1, 10, n, key=f"h_{i}")
-        if c2.button("X", key=f"rm_{i}"): 
-            layers_to_remove.append(i)
-    
-    for i in sorted(layers_to_remove, reverse=True):
-        st.session_state.hidden_layers.pop(i)
-        st.rerun()
+    tab_arch, tab_hyper, tab_train = st.tabs(["Architecture", "Hyperparameters", "Training"])
+
+    # --- TAB 1: ARCHITECTURE ---
+    with tab_arch:
+        input_nodes = st.number_input("Input Nodes", min_value=1, value=2, step=1)
+        output_nodes = st.number_input("Output Nodes", min_value=1, value=1, step=1)
         
-    st.markdown("---")
-    input_nodes = st.number_input("Input Features", 1, 10, 2)
-    output_nodes = st.number_input("Output Classes", 1, 10, 2)
+        st.markdown("---")
+        st.subheader("Hidden Layers")
+        
+        if st.button("➕ Add Hidden Layer", use_container_width=True):
+            st.session_state.layer_counter += 1
+            st.session_state.layers.append({
+                "id": st.session_state.layer_counter, 
+                "neurons": 3
+            })
+            st.rerun()
 
-    # 2. HYPERPARAMETERS
-    st.markdown("---")
-    st.subheader("Hyperparameters")
-    activ_func = st.selectbox("Activation Function", ["ReLU", "Sigmoid", "Tanh", "Softmax"])
-    loss_func = st.selectbox("Loss Function", ["Mean Squared Error (MSE)", "Cross Entropy", "Hinge Loss"])
-    epochs_setting = st.number_input("Number of Epochs", 10, 1000, 100)
+        layers_to_remove = []
+        for i, layer in enumerate(st.session_state.layers):
+            st.markdown(f"**Layer {i+1}**")
+            col1, col2 = st.columns([4, 1])
+            with col1:
+                new_val = st.number_input(
+                    label="Neurons",
+                    min_value=1,
+                    value=layer['neurons'],
+                    step=1,
+                    key=f"layer_neurons_{layer['id']}",
+                    label_visibility="collapsed"
+                )
+                st.session_state.layers[i]['neurons'] = new_val
+            with col2:
+                if st.button("✖", key=f"del_{layer['id']}", help="Delete this layer"):
+                    layers_to_remove.append(i)
 
-    # 3. STATS
-    st.markdown("---")
-    st.subheader("Network Stats")
-    topology = get_topology(input_nodes, st.session_state.hidden_layers, output_nodes)
-    t_layers, t_neurons, t_conns = calculate_stats(topology)
-    st.metric("Total Layers", t_layers)
-    st.metric("Total Neurons", t_neurons)
-    st.metric("Total Connections", t_conns)
+        if layers_to_remove:
+            for index in sorted(layers_to_remove, reverse=True):
+                del st.session_state.layers[index]
+            st.rerun()
 
+    # --- TAB 2: HYPERPARAMETERS ---
+    with tab_hyper:
+        st.subheader("Hyperparameters")
+        activation = st.selectbox("Activation Function", ["ReLU", "Sigmoid", "Tanh", "Leaky ReLU", "Softmax"])
+        loss_fn = st.selectbox("Loss Function", ["Mean Squared Error (MSE)", "Binary Cross-Entropy", "Categorical Cross-Entropy", "Hinge Loss"])
+        regularization = st.selectbox("Regularization", ["None", "L1 (Lasso)", "L2 (Ridge)", "Dropout"])
+        
+        if regularization == "Dropout":
+            st.slider("Dropout Rate", 0.0, 1.0, 0.2)
+
+    # --- TAB 3: TRAINING ---
+    with tab_train:
+        st.subheader("Training Config")
+        epochs = st.slider("Epochs", min_value=10, max_value=1000, step=10, value=100)
+        learning_rate = st.number_input("Learning Rate", value=0.01, step=0.001, format="%.4f")
+
+# --- COMPATIBILITY BRIDGE ---
+# This maps the variables from your new sidebar structure to the variables 
+# the existing visualization logic expects.
+st.session_state.hidden_layers = [layer["neurons"] for layer in st.session_state.layers]
+activ_func = activation
+loss_func = loss_fn
+epochs_setting = epochs
+
+# Recalculate topology based on new sidebar inputs
+topology = get_topology(input_nodes, st.session_state.hidden_layers, output_nodes)
 
 # --- MAIN PAGE LAYOUT ---
 col_viz, col_interact = st.columns([3, 2])
@@ -140,6 +180,13 @@ col_viz, col_interact = st.columns([3, 2])
 with col_viz:
     st.subheader("Network Architecture")
     
+    # Calculate stats for display
+    t_layers, t_neurons, t_conns = calculate_stats(topology)
+    s1, s2, s3 = st.columns(3)
+    s1.metric("Layers", t_layers)
+    s2.metric("Neurons", t_neurons)
+    s3.metric("Connections", t_conns)
+
     graph = graphviz.Digraph()
     graph.attr(rankdir='LR', splines='line', bgcolor='transparent')
     
@@ -237,29 +284,22 @@ if not st.session_state.trained:
             st.session_state.training_history = {}
             st.session_state.output_history = []
             
-            # 1. Generate "Truth" Targets (random between 0 and 1)
-            # We simulate that the network tries to reach these values
             st.session_state.targets = [round(np.random.uniform(0.1, 0.9), 4) for _ in range(output_nodes)]
             
-            # 2. Simulate Training Loop
             output_hist = []
             
             for epoch in range(epochs_setting + 1):
-                # Calculate simulated progress factor (0.0 to 1.0)
-                # Network gets better as epoch increases
-                progress = 1 - (0.95 ** epoch) # Converges to 1
+                progress = 1 - (0.95 ** epoch)
                 
-                # A. Generate Output Predictions for this epoch
+                # A. Generate Output Predictions
                 epoch_preds = []
                 for t in st.session_state.targets:
-                    # Current prediction = Target + Noise
-                    # Noise decreases as progress increases
                     noise = (np.random.normal(0, 0.5) * (1 - progress)) + (0.5 * (1-progress))
                     pred = t + noise
                     epoch_preds.append(pred)
                 output_hist.append(epoch_preds)
 
-                # B. Generate Weights History (Random Walk)
+                # B. Generate Weights History
                 for l in range(1, len(topology)):
                     for n in range(topology[l]):
                         k = f"L{l}_N{n}"
@@ -267,10 +307,7 @@ if not st.session_state.trained:
                             st.session_state.training_history[k] = []
                         
                         prev_size = topology[l-1]
-                        # Use existing weights or random start
                         base_weights = st.session_state.network_data.get(k, {}).get('weights', [0]*prev_size)
-                        
-                        # Perturb weights slightly based on epoch
                         current_weights = [w + np.random.normal(0, 0.01 * epoch) for w in base_weights]
                         st.session_state.training_history[k].append(current_weights)
 
@@ -287,19 +324,15 @@ else:
         st.rerun()
 
     with c_slider:
-        # SLIDER
         curr_epoch = st.slider("Epoch Timeline", 0, epochs_setting, epochs_setting)
         
-        # Calculate Total Error for this specific epoch
-        # (Consistent with the table below)
         if len(st.session_state.output_history) > curr_epoch:
             current_preds = st.session_state.output_history[curr_epoch]
             targets = st.session_state.targets
-            # MSE Calculation
             mse = np.mean([(t - p)**2 for t, p in zip(targets, current_preds)])
-            st.metric(label=f"Total Error (MSE) at Epoch {curr_epoch}", value=f"{mse:.5f}")
+            st.metric(label=f"Total Error ({loss_func}) at Epoch {curr_epoch}", value=f"{mse:.5f}")
 
-    # --- EXPECTED vs ACTUAL TABLE (Requested Feature) ---
+    # --- EXPECTED vs ACTUAL TABLE ---
     st.subheader(f"Output Comparison at Epoch {curr_epoch}")
     
     if len(st.session_state.output_history) > curr_epoch:
@@ -320,7 +353,6 @@ else:
     # --- ERROR GRAPH ---
     st.subheader("Total Error vs Epoch")
     
-    # Calculate MSE for all epochs to plot graph
     mse_history = []
     for preds in st.session_state.output_history:
         mse = np.mean([(t - p)**2 for t, p in zip(st.session_state.targets, preds)])
@@ -354,13 +386,12 @@ else:
     
     st.dataframe(pd.DataFrame(summary_data), use_container_width=True, hide_index=True)
     st.markdown("---")
+
 st.markdown("---")
 st.subheader("🔍 Detailed Computation View")
 
 if st.session_state.trained:
-    # Dummy input for visualization (Phase 1)
     input_vector = [1.0] * topology[0]
-
     render_computation_inspector(
         topology=topology,
         network_data=st.session_state.network_data,
