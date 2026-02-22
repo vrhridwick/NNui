@@ -3,6 +3,10 @@ import graphviz
 import pandas as pd
 import numpy as np
 import time
+from services.payload_builder import build_training_payload
+from services.validators import validate_full_config
+import json
+import os
 # Assuming computation_inspector exists in your local directory
 try:
     from computation_inspector import render_computation_inspector
@@ -172,7 +176,20 @@ epochs_setting = epochs
 
 # Recalculate topology based on new sidebar inputs
 topology = get_topology(input_nodes, st.session_state.hidden_layers, output_nodes)
+prev_layer_size = input_nodes
+# print("Hidden layers:", st.session_state.layers)
+# print("Input nodes:", input_nodes)
+# print("Output nodes:", output_nodes)
+# Hidden layers
+for layer_idx, neurons in enumerate(st.session_state.hidden_layers, start=1):
+    for neuron_idx in range(neurons):
+        init_neuron_data(layer_idx, neuron_idx, prev_layer_size)
+    prev_layer_size = neurons
 
+# Output layer
+output_layer_idx = len(st.session_state.hidden_layers) + 1
+for neuron_idx in range(output_nodes):
+    init_neuron_data(output_layer_idx, neuron_idx, prev_layer_size)
 # --- MAIN PAGE LAYOUT ---
 col_viz, col_interact = st.columns([3, 2])
 
@@ -274,9 +291,30 @@ with col_interact:
 
 # --- BOTTOM SECTION: TRAINING & RESULTS ---
 st.markdown("---")
+# st.write(st.session_state.network_data)
 
+
+    
 if not st.session_state.trained:
     if st.button("Train Model", type="primary"):
+
+        payload = build_training_payload(
+        input_nodes=input_nodes,
+        hidden_layers=st.session_state.layers,
+        output_nodes=output_nodes,
+        activation=activation,
+        epochs=epochs,
+        learning_rate=learning_rate,
+        # training_inputs=training_inputs,
+        # training_targets=training_targets,
+        network_data=st.session_state.network_data
+        )
+        os.makedirs("config", exist_ok=True)
+        with open("config/config.json", "w") as f:
+            json.dump(payload, f, indent=4)
+
+        st.success("config.json generated!")
+
         with st.spinner(f"Training for {epochs_setting} epochs..."):
             time.sleep(1.0) 
             

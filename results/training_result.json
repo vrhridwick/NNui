@@ -1,0 +1,106 @@
+{
+  "status": "success",
+  "history": [
+    {
+      "epoch": 1,
+      "error": 0.45,
+      "actual_output": [0.10],
+      "expected_output": [0.8],
+      "network_state": { "L1_N0": { "bias": -0.71, "weights": [-0.8, 0.5] } }
+    },
+    {
+      "epoch": 2,
+      "error": 0.42,
+      "actual_output": [0.15],
+      "expected_output": [0.8],
+      "network_state": {}
+    },
+    {
+      "epoch": 3,
+      "error": 0.39,
+      "actual_output": [0.18],
+      "expected_output": [0.8],
+      "network_state": {}
+    },
+    {
+      "epoch": 4,
+      "error": 0.36,
+      "actual_output": [0.22],
+      "expected_output": [0.8],
+      "network_state": {}
+    },
+    {
+      "epoch": 5,
+      "error": 0.33,
+      "actual_output": [0.25],
+      "expected_output": [0.8],
+      "network_state": {}
+    },
+    {
+      "epoch": 6,
+      "error": 0.31,
+      "actual_output": [0.28],
+      "expected_output": [0.8],
+      "network_state": {}
+    },
+    {
+      "epoch": 7,
+      "error": 0.29,
+      "actual_output": [0.30],
+      "expected_output": [0.8],
+      "network_state": {}
+    },
+    {
+      "epoch": 8,
+      "error": 0.27,
+      "actual_output": [0.33],
+      "expected_output": [0.8],
+      "network_state": {}
+    },
+    {
+      "epoch": 9,
+      "error": 0.25,
+      "actual_output": [0.36],
+      "expected_output": [0.8],
+      "network_state": {}
+    },
+    {
+      "epoch": 10,
+      "error": 0.23,
+      "actual_output": [0.40],
+      "expected_output": [0.8],
+      "network_state": {}
+    },
+
+    { "epoch": 11, "error": 0.21, "actual_output": [0.43], "expected_output": [0.8], "network_state": {} },
+    { "epoch": 12, "error": 0.19, "actual_output": [0.46], "expected_output": [0.8], "network_state": {} },
+    { "epoch": 13, "error": 0.17, "actual_output": [0.50], "expected_output": [0.8], "network_state": {} },
+    { "epoch": 14, "error": 0.15, "actual_output": [0.53], "expected_output": [0.8], "network_state": {} },
+    { "epoch": 15, "error": 0.13, "actual_output": [0.56], "expected_output": [0.8], "network_state": {} },
+    { "epoch": 16, "error": 0.12, "actual_output": [0.59], "expected_output": [0.8], "network_state": {} },
+    { "epoch": 17, "error": 0.11, "actual_output": [0.62], "expected_output": [0.8], "network_state": {} },
+    { "epoch": 18, "error": 0.10, "actual_output": [0.65], "expected_output": [0.8], "network_state": {} },
+    { "epoch": 19, "error": 0.09, "actual_output": [0.68], "expected_output": [0.8], "network_state": {} },
+    { "epoch": 20, "error": 0.08, "actual_output": [0.70], "expected_output": [0.8], "network_state": {} },
+    { "epoch": 21, "error": 0.07, "actual_output": [0.72], "expected_output": [0.8], "network_state": {} },
+    { "epoch": 22, "error": 0.06, "actual_output": [0.74], "expected_output": [0.8], "network_state": {} },
+    { "epoch": 23, "error": 0.055, "actual_output": [0.76], "expected_output": [0.8], "network_state": {} },
+    { "epoch": 24, "error": 0.050, "actual_output": [0.77], "expected_output": [0.8], "network_state": {} },
+    { "epoch": 25, "error": 0.045, "actual_output": [0.78], "expected_output": [0.8], "network_state": {} },
+    { "epoch": 26, "error": 0.040, "actual_output": [0.79], "expected_output": [0.8], "network_state": {} },
+    { "epoch": 27, "error": 0.035, "actual_output": [0.795], "expected_output": [0.8], "network_state": {} },
+    { "epoch": 28, "error": 0.030, "actual_output": [0.798], "expected_output": [0.8], "network_state": {} },
+    { "epoch": 29, "error": 0.025, "actual_output": [0.799], "expected_output": [0.8], "network_state": {} },
+    { "epoch": 30, "error": 0.020, "actual_output": [0.800], "expected_output": [0.8], "network_state": {} },
+    { "epoch": 31, "error": 0.020, "actual_output": [0.800], "expected_output": [0.8], "network_state": {} },
+    { "epoch": 32, "error": 0.020, "actual_output": [0.800], "expected_output": [0.8], "network_state": {} },
+    { "epoch": 33, "error": 0.020, "actual_output": [0.800], "expected_output": [0.8], "network_state": {} },
+    { "epoch": 34, "error": 0.020, "actual_output": [0.800], "expected_output": [0.8], "network_state": {} },
+    { "epoch": 35, "error": 0.020, "actual_output": [0.800], "expected_output": [0.8], "network_state": {} },
+    { "epoch": 36, "error": 0.020, "actual_output": [0.800], "expected_output": [0.8], "network_state": {} },
+    { "epoch": 37, "error": 0.020, "actual_output": [0.800], "expected_output": [0.8], "network_state": {} },
+    { "epoch": 38, "error": 0.020, "actual_output": [0.800], "expected_output": [0.8], "network_state": {} },
+    { "epoch": 39, "error": 0.020, "actual_output": [0.800], "expected_output": [0.8], "network_state": {} },
+    { "epoch": 40, "error": 0.020, "actual_output": [0.800], "expected_output": [0.8], "network_state": {} }
+  ]
+}
