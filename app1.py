@@ -5,6 +5,7 @@ import numpy as np
 import time
 from services.payload_builder import build_training_payload
 from services.validators import validate_full_config
+from services.plot1 import load_training_result, display_training_results
 import json
 import os
 # Assuming computation_inspector exists in your local directory
@@ -113,20 +114,22 @@ with st.sidebar:
 
     # --- TAB 1: ARCHITECTURE ---
     with tab_arch:
-        input_nodes = st.number_input("Input Nodes", min_value=1, value=2, step=1)
-        output_nodes = st.number_input("Output Nodes", min_value=1, value=1, step=1)
+        input_nodes = st.number_input("Input Nodes", min_value=1,max_value=5, value=2, step=1)
+        output_nodes = st.number_input("Output Nodes", min_value=1,max_value=5, value=1, step=1)
         
         st.markdown("---")
         st.subheader("Hidden Layers")
-        
-        if st.button("➕ Add Hidden Layer", use_container_width=True):
+        max_layers_reached = len(st.session_state.layers) >= 5
+        min_layers_reached=len(st.session_state.layers) <= 1
+        if st.button("➕ Add Hidden Layer", use_container_width=True,disabled=max_layers_reached):
             st.session_state.layer_counter += 1
             st.session_state.layers.append({
                 "id": st.session_state.layer_counter, 
                 "neurons": 3
             })
             st.rerun()
-
+        if max_layers_reached:
+            st.caption("⚠️ Maximum of 5 hidden layers reached.")
         layers_to_remove = []
         for i, layer in enumerate(st.session_state.layers):
             st.markdown(f"**Layer {i+1}**")
@@ -135,6 +138,7 @@ with st.sidebar:
                 new_val = st.number_input(
                     label="Neurons",
                     min_value=1,
+                    max_value=5,
                     value=layer['neurons'],
                     step=1,
                     key=f"layer_neurons_{layer['id']}",
@@ -142,13 +146,16 @@ with st.sidebar:
                 )
                 st.session_state.layers[i]['neurons'] = new_val
             with col2:
-                if st.button("✖", key=f"del_{layer['id']}", help="Delete this layer"):
+                delete_disabled = min_layers_reached
+                if st.button("✖", key=f"del_{layer['id']}", help="Delete this layer",disabled=delete_disabled):
                     layers_to_remove.append(i)
 
         if layers_to_remove:
             for index in sorted(layers_to_remove, reverse=True):
                 del st.session_state.layers[index]
             st.rerun()
+        if min_layers_reached:
+            st.caption("⚠️ Minimum of 1 hidden layer required.")
 
     # --- TAB 2: HYPERPARAMETERS ---
     with tab_hyper:
@@ -165,6 +172,13 @@ with st.sidebar:
         st.subheader("Training Config")
         epochs = st.slider("Epochs", min_value=10, max_value=1000, step=10, value=100)
         learning_rate = st.number_input("Learning Rate", value=0.01, step=0.001, format="%.4f")
+        st.subheader("Training Sample")
+        st.caption("Provide the data you want the model to train on.")
+        st.markdown("**Inputs (X)**")
+        user_inputs = [st.number_input(f"Input Feature {i}", value=1.0, step=0.1, key=f"in_{i}") for i in range(input_nodes)]
+        st.markdown("---")
+        st.markdown("**Expected Output (Y)**")
+        user_targets = [st.number_input(f"Target Output {i}", value=0.8, step=0.1, key=f"out_{i}") for i in range(output_nodes)]
 
 # --- COMPATIBILITY BRIDGE ---
 # This maps the variables from your new sidebar structure to the variables 
@@ -291,13 +305,40 @@ with col_interact:
 
 # --- BOTTOM SECTION: TRAINING & RESULTS ---
 st.markdown("---")
+def prune_network_data():
+    valid_keys = set()
+
+    prev_layer_size = input_nodes  # make sure input_nodes is accessible
+
+    # Hidden layers
+    for layer_idx, layer in enumerate(st.session_state.layers, start=1):
+        neuron_count = layer["neurons"]
+
+        for neuron_idx in range(neuron_count):
+            valid_keys.add(f"L{layer_idx}_N{neuron_idx}")
+
+        prev_layer_size = neuron_count
+
+    # Output layer
+    output_layer_idx = len(st.session_state.layers) + 1
+
+    for neuron_idx in range(output_nodes):
+        valid_keys.add(f"L{output_layer_idx}_N{neuron_idx}")
+
+    # Remove invalid neurons
+    keys_to_delete = [
+        key for key in st.session_state.network_data
+        if key not in valid_keys
+    ]
+
+    for key in keys_to_delete:
+        del st.session_state.network_data[key]
 # st.write(st.session_state.network_data)
-
-
-    
+if "show_results" not in st.session_state:
+    st.session_state.show_results = False   
 if not st.session_state.trained:
     if st.button("Train Model", type="primary"):
-
+        prune_network_data()
         payload = build_training_payload(
         input_nodes=input_nodes,
         hidden_layers=st.session_state.layers,
@@ -315,127 +356,134 @@ if not st.session_state.trained:
 
         st.success("config.json generated!")
 
-        with st.spinner(f"Training for {epochs_setting} epochs..."):
-            time.sleep(1.0) 
+if st.button("Show Training Results"):
+    st.session_state.show_results = True
+if st.session_state.show_results:
+    data = load_training_result("results/training_result.json")
+    # plot_training_metrics(data)
+    display_training_results(data)
+#         with st.spinner(f"Training for {epochs_setting} epochs..."):
+#             time.sleep(1.0) 
             
-            # --- SIMULATION START ---
-            st.session_state.training_history = {}
-            st.session_state.output_history = []
+#             # --- SIMULATION START ---
+#             st.session_state.training_history = {}
+#             st.session_state.output_history = []
             
-            st.session_state.targets = [round(np.random.uniform(0.1, 0.9), 4) for _ in range(output_nodes)]
+#             st.session_state.targets = [round(np.random.uniform(0.1, 0.9), 4) for _ in range(output_nodes)]
             
-            output_hist = []
+#             output_hist = []
             
-            for epoch in range(epochs_setting + 1):
-                progress = 1 - (0.95 ** epoch)
+#             for epoch in range(epochs_setting + 1):
+#                 progress = 1 - (0.95 ** epoch)
                 
-                # A. Generate Output Predictions
-                epoch_preds = []
-                for t in st.session_state.targets:
-                    noise = (np.random.normal(0, 0.5) * (1 - progress)) + (0.5 * (1-progress))
-                    pred = t + noise
-                    epoch_preds.append(pred)
-                output_hist.append(epoch_preds)
+#                 # A. Generate Output Predictions
+#                 epoch_preds = []
+#                 for t in st.session_state.targets:
+#                     noise = (np.random.normal(0, 0.5) * (1 - progress)) + (0.5 * (1-progress))
+#                     pred = t + noise
+#                     epoch_preds.append(pred)
+#                 output_hist.append(epoch_preds)
 
-                # B. Generate Weights History
-                for l in range(1, len(topology)):
-                    for n in range(topology[l]):
-                        k = f"L{l}_N{n}"
-                        if k not in st.session_state.training_history:
-                            st.session_state.training_history[k] = []
+#                 # B. Generate Weights History
+#                 for l in range(1, len(topology)):
+#                     for n in range(topology[l]):
+#                         k = f"L{l}_N{n}"
+#                         if k not in st.session_state.training_history:
+#                             st.session_state.training_history[k] = []
                         
-                        prev_size = topology[l-1]
-                        base_weights = st.session_state.network_data.get(k, {}).get('weights', [0]*prev_size)
-                        current_weights = [w + np.random.normal(0, 0.01 * epoch) for w in base_weights]
-                        st.session_state.training_history[k].append(current_weights)
+#                         prev_size = topology[l-1]
+#                         base_weights = st.session_state.network_data.get(k, {}).get('weights', [0]*prev_size)
+#                         current_weights = [w + np.random.normal(0, 0.01 * epoch) for w in base_weights]
+#                         st.session_state.training_history[k].append(current_weights)
 
-            st.session_state.output_history = output_hist
-            st.session_state.trained = True
-            st.rerun()
+#             st.session_state.output_history = output_hist
+#             st.session_state.trained = True
+#             st.rerun()
 
-else:
-    c_reset, c_slider = st.columns([1, 4])
+# else:
+#     c_reset, c_slider = st.columns([1, 4])
     
-    if c_reset.button("Reset Model"):
-        st.session_state.trained = False
-        st.session_state.network_data = {}
-        st.rerun()
+#     if c_reset.button("Reset Model"):
+#         st.session_state.trained = False
+#         st.session_state.network_data = {}
+#         st.rerun()
 
-    with c_slider:
-        curr_epoch = st.slider("Epoch Timeline", 0, epochs_setting, epochs_setting)
+#     with c_slider:
+#         curr_epoch = st.slider("Epoch Timeline", 0, epochs_setting, epochs_setting)
         
-        if len(st.session_state.output_history) > curr_epoch:
-            current_preds = st.session_state.output_history[curr_epoch]
-            targets = st.session_state.targets
-            mse = np.mean([(t - p)**2 for t, p in zip(targets, current_preds)])
-            st.metric(label=f"Total Error ({loss_func}) at Epoch {curr_epoch}", value=f"{mse:.5f}")
+#         if len(st.session_state.output_history) > curr_epoch:
+#             current_preds = st.session_state.output_history[curr_epoch]
+#             targets = st.session_state.targets
+#             mse = np.mean([(t - p)**2 for t, p in zip(targets, current_preds)])
+#             st.metric(label=f"Total Error ({loss_func}) at Epoch {curr_epoch}", value=f"{mse:.5f}")
 
-    # --- EXPECTED vs ACTUAL TABLE ---
-    st.subheader(f"Output Comparison at Epoch {curr_epoch}")
+#     # --- EXPECTED vs ACTUAL TABLE ---
+#     st.subheader(f"Output Comparison at Epoch {curr_epoch}")
     
-    if len(st.session_state.output_history) > curr_epoch:
-        current_preds = st.session_state.output_history[curr_epoch]
-        targets = st.session_state.targets
+#     if len(st.session_state.output_history) > curr_epoch:
+#         current_preds = st.session_state.output_history[curr_epoch]
+#         targets = st.session_state.targets
         
-        comparison_data = []
-        for i, (pred, target) in enumerate(zip(current_preds, targets)):
-            comparison_data.append({
-                "Output Neuron": f"y{i+1}",
-                "Expected (Target)": f"{target:.4f}",
-                "Actual (Predicted)": f"{pred:.4f}",
-                "Error (Diff)": f"{abs(target - pred):.4f}"
-            })
+#         comparison_data = []
+#         for i, (pred, target) in enumerate(zip(current_preds, targets)):
+#             comparison_data.append({
+#                 "Output Neuron": f"y{i+1}",
+#                 "Expected (Target)": f"{target:.4f}",
+#                 "Actual (Predicted)": f"{pred:.4f}",
+#                 "Error (Diff)": f"{abs(target - pred):.4f}"
+#             })
         
-        st.dataframe(pd.DataFrame(comparison_data), use_container_width=True, hide_index=True)
+#         st.dataframe(pd.DataFrame(comparison_data), use_container_width=True, hide_index=True)
 
-    # --- ERROR GRAPH ---
-    st.subheader("Total Error vs Epoch")
+#     # --- ERROR GRAPH ---
+#     st.subheader("Total Error vs Epoch")
     
-    mse_history = []
-    for preds in st.session_state.output_history:
-        mse = np.mean([(t - p)**2 for t, p in zip(st.session_state.targets, preds)])
-        mse_history.append(mse)
+#     mse_history = []
+#     for preds in st.session_state.output_history:
+#         mse = np.mean([(t - p)**2 for t, p in zip(st.session_state.targets, preds)])
+#         mse_history.append(mse)
 
-    loss_df = pd.DataFrame({
-        "Epoch": range(len(mse_history)),
-        "Error": mse_history
-    })
+#     loss_df = pd.DataFrame({
+#         "Epoch": range(len(mse_history)),
+#         "Error": mse_history
+#     })
     
-    st.line_chart(loss_df, x="Epoch", y="Error", height=250)
+#     st.line_chart(loss_df, x="Epoch", y="Error", height=250)
 
-    # --- WEIGHT SUMMARY ---
-    st.subheader("Layer-wise Weight Summary (Final Epoch)")
-    summary_data = []
-    for l in range(1, len(topology)):
-        for n in range(topology[l]):
-            key = f"L{l}_N{n}"
-            if key in st.session_state.training_history:
-                final_weights = st.session_state.training_history[key][-1]
-                curr_bias = st.session_state.network_data.get(key, {}).get('bias', 0.0)
+#     # --- WEIGHT SUMMARY ---
+#     st.subheader("Layer-wise Weight Summary (Final Epoch)")
+#     summary_data = []
+#     for l in range(1, len(topology)):
+#         for n in range(topology[l]):
+#             key = f"L{l}_N{n}"
+#             if key in st.session_state.training_history:
+#                 final_weights = st.session_state.training_history[key][-1]
+#                 curr_bias = st.session_state.network_data.get(key, {}).get('bias', 0.0)
                 
-                summary_data.append({
-                    "Layer": l,
-                    "Neuron": n+1,
-                    "Avg Wt": round(np.mean(final_weights), 4),
-                    "Min Wt": round(np.min(final_weights), 4),
-                    "Max Wt": round(np.max(final_weights), 4),
-                    "Bias": round(curr_bias, 4)
-                })
+#                 summary_data.append({
+#                     "Layer": l,
+#                     "Neuron": n+1,
+#                     "Avg Wt": round(np.mean(final_weights), 4),
+#                     "Min Wt": round(np.min(final_weights), 4),
+#                     "Max Wt": round(np.max(final_weights), 4),
+#                     "Bias": round(curr_bias, 4)
+#                 })
     
-    st.dataframe(pd.DataFrame(summary_data), use_container_width=True, hide_index=True)
-    st.markdown("---")
+#     st.dataframe(pd.DataFrame(summary_data), use_container_width=True, hide_index=True)
+#     st.markdown("---")
 
-st.markdown("---")
-st.subheader("🔍 Detailed Computation View")
+# st.markdown("---")
+# st.subheader("🔍 Detailed Computation View")
 
-if st.session_state.trained:
-    input_vector = [1.0] * topology[0]
-    render_computation_inspector(
-        topology=topology,
-        network_data=st.session_state.network_data,
-        input_vector=input_vector,
-        activation_fn=activ_func,
-        epoch_idx=curr_epoch
-    )
-else:
-    st.info("Train the model to inspect computations.")
+# if st.session_state.trained:
+#     input_vector = [1.0] * topology[0]
+#     render_computation_inspector(
+#         topology=topology,
+#         network_data=st.session_state.network_data,
+#         input_vector=input_vector,
+#         activation_fn=activ_func,
+#         epoch_idx=curr_epoch
+#     )
+# else:
+#     st.info("Train the model to inspect computations.")
+
